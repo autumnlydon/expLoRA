@@ -22,30 +22,35 @@ interface FormData {
   images: ImageFile[]
 }
 
-// Add this helper function to convert image to PNG
-const convertToPNG = (file: File): Promise<File> => {
+// Modify the convertToPNG function to ensure we keep the base64 data
+const convertToPNG = (file: File): Promise<ImageFile> => {
   return new Promise((resolve) => {
     const img = new window.Image()
     img.onload = () => {
-      // Create canvas and draw image
       const canvas = document.createElement('canvas')
       canvas.width = img.width
       canvas.height = img.height
       const ctx = canvas.getContext('2d')
       ctx?.drawImage(img, 0, 0)
       
-      // Convert to PNG
-      canvas.toBlob((blob) => {
-        if (blob) {
-          // Create new file with numbered name
-          const convertedFile = new File(
-            [blob],
-            `image-${Date.now()}.png`,
-            { type: 'image/png' }
-          )
-          resolve(convertedFile)
-        }
-      }, 'image/png')
+      const base64Data = canvas.toDataURL('image/png')
+      console.log('Converted image preview:', base64Data.substring(0, 50))
+      
+      const imageFile: ImageFile = new File(
+        [file], 
+        `image-${Date.now()}.png`, 
+        { type: 'image/png' }
+      ) as ImageFile
+      
+      imageFile.preview = base64Data
+      imageFile.dimensions = {
+        width: img.width,
+        height: img.height
+      }
+      imageFile.id = crypto.randomUUID()
+      imageFile.isValid = img.width >= MIN_RESOLUTION && img.height >= MIN_RESOLUTION
+
+      resolve(imageFile)
     }
     img.src = URL.createObjectURL(file)
   })
@@ -102,20 +107,26 @@ export default function Upload() {
   useEffect(() => {
     if (files.length > 0) {
       try {
-        // Create a compressed version of the files data
-        const compressedData = files.map(file => ({
+        const processedFiles = files.map(file => ({
           id: file.id,
           name: file.name,
-          // Take only the first part of the base64 string (preview) to reduce size
-          preview: file.preview?.substring(0, 200000) // Limit to ~200KB per image
+          preview: file.preview // Store complete preview without truncating
         }))
         
-        // Store in chunks if needed
-        const chunk1 = compressedData.slice(0, Math.floor(compressedData.length / 2))
-        const chunk2 = compressedData.slice(Math.floor(compressedData.length / 2))
+        // Split the data into smaller chunks
+        processedFiles.forEach((file, index) => {
+          if (file.preview) {
+            // Store each image separately with its own key
+            sessionStorage.setItem(`image_${index}`, JSON.stringify({
+              id: file.id,
+              name: file.name,
+              preview: file.preview
+            }))
+          }
+        })
         
-        sessionStorage.setItem('processedImages_1', JSON.stringify(chunk1))
-        sessionStorage.setItem('processedImages_2', JSON.stringify(chunk2))
+        // Store the count of images
+        sessionStorage.setItem('imageCount', String(files.length))
       } catch (error) {
         console.error('Storage failed:', error)
       }
