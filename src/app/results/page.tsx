@@ -102,7 +102,7 @@ export default function Results() {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              prompt: `Please describe this picture of ${productName}. Focus on key visual details and features.`,
+              prompt: `Create a prompt for the following images, describing everything except the ${productName}. Describe the scene, background, lighting, style, and any props & objects. Instead of describing the ${productName}s, refer to it as PN. Start each prompt with the prefix sentence “A photo of PN in different angles, positions, and settings.”. Adjust the prefix based on the positions or angle or settings of ${productName}s, for ex “A Photo of a PN from a top down angle“.`,
               image: image.preview.split(',')[1] // Remove data:image/png;base64, prefix if present
             })
           })
