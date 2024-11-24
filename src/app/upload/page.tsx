@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import Image from 'next/image'
 import { Container } from '@/components/Container'
 import { useRouter } from 'next/navigation'
+import { openDB } from 'idb'
 
 const MIN_RESOLUTION = 900
 
@@ -22,8 +23,20 @@ interface FormData {
   images: ImageFile[]
 }
 
+// Add this helper function at the top level
+const initDB = async () => {
+  return openDB('imageStore', 1, {
+    upgrade(db) {
+      // Create the store if it doesn't exist
+      if (!db.objectStoreNames.contains('images')) {
+        db.createObjectStore('images')
+      }
+    },
+  })
+}
+
 // Modify the convertToPNG function to ensure we keep the base64 data
-const convertToPNG = (file: File): Promise<ImageFile> => {
+const convertToPNG = (file: File, index: number): Promise<ImageFile> => {
   return new Promise((resolve) => {
     const img = new window.Image()
     img.onload = () => {
@@ -34,11 +47,14 @@ const convertToPNG = (file: File): Promise<ImageFile> => {
       ctx?.drawImage(img, 0, 0)
       
       const base64Data = canvas.toDataURL('image/png')
-      console.log('Converted image preview:', base64Data.substring(0, 50))
+      
+      // Create padded number for filename (01, 02, etc.)
+      const paddedIndex = String(index + 1).padStart(2, '0')
+      const newFileName = `IMG_${paddedIndex}.png`
       
       const imageFile: ImageFile = new File(
         [file], 
-        `image-${Date.now()}.png`, 
+        newFileName,  // Use our new filename
         { type: 'image/png' }
       ) as ImageFile
       
@@ -58,7 +74,7 @@ const convertToPNG = (file: File): Promise<ImageFile> => {
 
 // Modify your checkImageDimensions function to include conversion
 const checkImageDimensions = async (file: File, index: number): Promise<ImageFile> => {
-  const pngFile = await convertToPNG(file)
+  const pngFile = await convertToPNG(file, index)
   
   return new Promise((resolve) => {
     const reader = new FileReader()
@@ -87,6 +103,7 @@ export default function Upload() {
   const [files, setFiles] = useState<ImageFile[]>([])
   const [description, setDescription] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [productName, setProductName] = useState('')
 
   useEffect(() => {
     // Clear old images when component mounts fresh (not from back navigation)
@@ -103,33 +120,38 @@ export default function Upload() {
     }
   }, [])
 
-  // Add this effect to keep storage in sync with state
+  // Modify your useEffect for storage
   useEffect(() => {
     if (files.length > 0) {
-      try {
-        const processedFiles = files.map(file => ({
-          id: file.id,
-          name: file.name,
-          preview: file.preview // Store complete preview without truncating
-        }))
-        
-        // Split the data into smaller chunks
-        processedFiles.forEach((file, index) => {
-          if (file.preview) {
-            // Store each image separately with its own key
-            sessionStorage.setItem(`image_${index}`, JSON.stringify({
+      const storeImages = async () => {
+        try {
+          const db = await initDB()
+          
+          // Clear existing images
+          await Promise.all(
+            Array.from(Array(await db.get('images', 'imageCount') || 0).keys())
+              .map(i => db.delete('images', `image_${i}`))
+          )
+          
+          // Store new images
+          await Promise.all(files.map(async (file, index) => {
+            await db.put('images', {
               id: file.id,
               name: file.name,
               preview: file.preview
-            }))
-          }
-        })
-        
-        // Store the count of images
-        sessionStorage.setItem('imageCount', String(files.length))
-      } catch (error) {
-        console.error('Storage failed:', error)
+            }, `image_${index}`)
+          }))
+          
+          // Store the count
+          await db.put('images', files.length, 'imageCount')
+          
+          console.log('Successfully stored', files.length, 'images')
+        } catch (error) {
+          console.error('Failed to store images:', error)
+        }
       }
+
+      storeImages()
     }
   }, [files])
 
@@ -141,14 +163,16 @@ export default function Upload() {
     const droppedFiles = Array.from(e.dataTransfer.files)
     const imageFiles = droppedFiles.filter(file => file.type.startsWith('image/'))
     
-    Promise.all(imageFiles.map((file, index) => checkImageDimensions(file, index)))
+    // Pass index to convertToPNG
+    Promise.all(imageFiles.map((file, index) => convertToPNG(file, index)))
       .then(processedFiles => setFiles(prev => [...prev, ...processedFiles]))
   }, [])
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files)
-      Promise.all(newFiles.map((file, index) => checkImageDimensions(file, index)))
+      // Pass index to convertToPNG
+      Promise.all(newFiles.map((file, index) => convertToPNG(file, index)))
         .then(processedFiles => setFiles(prev => [...prev, ...processedFiles]))
     }
   }
@@ -174,13 +198,24 @@ export default function Upload() {
     setIsSubmitting(true)
     
     try {
-      // Create a simple query string with just essential data
-      const params = new URLSearchParams({
-        count: files.length.toString(),
-        description: description
-      })
-
-      router.push(`/results?${params.toString()}`)
+      const db = await initDB()
+      
+      // Store the product name
+      await db.put('images', productName, 'productName')
+      console.log('Stored product name:', productName) // Debug log
+      
+      // Store the files
+      await Promise.all(files.map(async (file, index) => {
+        await db.put('images', {
+          id: file.id,
+          name: file.name,
+          preview: file.preview
+        }, `image_${index}`)
+      }))
+      
+      await db.put('images', files.length, 'imageCount')
+      
+      router.push('/results')
     } catch (error) {
       console.error('Submission failed:', error)
       alert('Failed to process images. Please try again.')
@@ -291,6 +326,24 @@ export default function Upload() {
             </div>
 
             <form onSubmit={handleSubmit} className="mt-12 max-w-2xl mx-auto">
+              <div className="mb-6">
+                <label 
+                  htmlFor="productName" 
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Enter Name of Product
+                </label>
+                <input
+                  id="productName"
+                  type="text"
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  placeholder="Enter product name..."
+                  value={productName}
+                  onChange={(e) => setProductName(e.target.value)}
+                  required
+                />
+              </div>
+              
               <div className="mb-6">
                 <label 
                   htmlFor="description" 
