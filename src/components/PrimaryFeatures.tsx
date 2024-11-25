@@ -14,27 +14,27 @@ import screenshotVatReturns from '@/images/screenshots/vat-returns.png'
 
 const features = [
   {
-    title: 'Payroll',
+    title: 'Upload',
     description:
-      "Keep track of everyone's salaries and whether or not they've been paid. Direct deposit not supported.",
+      "Upload up to 25 images of your product. These can be of any data type.",
     image: screenshotPayroll,
   },
   {
-    title: 'Claim expenses',
+    title: 'Process',
     description:
-      "All of your receipts organized into one place, as long as you don't mind typing in the data by hand.",
+      "Images will be converted to a .png file andhecked for resolution and aspect ratio. If they are not up to standard, you will be shown and have the option to delete them.",
     image: screenshotExpenses,
   },
   {
-    title: 'VAT handling',
+    title: 'Label',
     description:
-      "We only sell our software to companies who don't deal with VAT at all, so technically we do all the VAT stuff they need.",
+      "AI will generate clear, understandable captions for each image. You can edit these if you want.",
     image: screenshotVatReturns,
   },
   {
-    title: 'Reporting',
+    title: 'Download',
     description:
-      'Easily export your data into an Excel spreadsheet where you can do whatever the hell you want with it.',
+      'Download your dataset as a zip file containing all the images and their respective captions.',
     image: screenshotReporting,
   },
 ]
@@ -76,11 +76,10 @@ export function PrimaryFeatures() {
       <Container className="relative">
         <div className="max-w-2xl md:mx-auto md:text-center xl:max-w-none">
           <h2 className="font-display text-3xl tracking-tight text-white sm:text-4xl md:text-5xl">
-            Everything you need to run your books.
+            Everything you need to create a clean, LoRA-ready dataset.
           </h2>
           <p className="mt-6 text-lg tracking-tight text-blue-100">
-            Well everything you need if you aren’t that picky about minor
-            details like tax compliance.
+            Well everything you need if you use less than 20 images rn bc it's a little buggy.
           </p>
         </div>
         <TabGroup
