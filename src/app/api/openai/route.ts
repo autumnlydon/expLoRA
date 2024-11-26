@@ -8,11 +8,13 @@ const openai = new OpenAI({
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { prompt, image } = body
+    const { prompt, image, productName } = body
 
     const imageUrl = image.startsWith('data:') 
       ? image 
       : `data:image/png;base64,${image}`
+
+    const productDescription = productName || 'product'
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -20,7 +22,10 @@ export async function POST(req: Request) {
         {
           role: "user",
           content: [
-            { type: "text", text: prompt },
+            { 
+              type: "text", 
+              text: `Please provide a detailed, clear description of this ${productDescription} image. Describe the ${productDescription}'s appearance, focusing on its key features, colors, textures, and any notable visual elements. Keep the description concise but informative. Refer to the item only as "${productDescription}".`
+            },
             {
               type: "image_url",
               image_url: {

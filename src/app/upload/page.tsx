@@ -225,152 +225,188 @@ export default function Upload() {
   }
 
   return (
-    <Container className="pt-12 pb-16">
-      <div className="mx-auto max-w-[1800px]">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold mb-3">Image Upload</h1>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Upload your images to get started. Each image must be at least {MIN_RESOLUTION}px in both width and height. 
-            We accept PNG, JPG, and GIF formats up to 10MB per file.
-          </p>
-        </div>
-
-        <div
-          className={`
-            border-2 border-dashed rounded-xl p-8
-            flex flex-col items-center justify-center
-            min-h-[250px] w-full
-            mb-8 mt-4
-            transition-all duration-200 ease-in-out
-            ${isDragging 
-              ? 'border-blue-500 bg-blue-50' 
-              : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-            }
-          `}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-        >
-          <div className="mb-4">
-            <svg
-              className={`mx-auto h-12 w-12 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`}
-              stroke="currentColor"
-              fill="none"
-              viewBox="0 0 48 48"
-              aria-hidden="true"
-            >
-              <path
-                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleFileInput}
-            className="hidden"
-            id="fileInput"
-          />
-          <div className="text-center space-y-2">
-            <div>
-              <label
-                htmlFor="fileInput"
-                className="relative cursor-pointer rounded-md font-medium text-lg text-blue-600 hover:text-blue-500"
-              >
-                Upload files
-              </label>
-              <span className="text-gray-500 text-lg"> or drag and drop</span>
-            </div>
-            <p className="text-gray-500 text-sm">
-              PNG, JPG, GIF up to 10MB
+    <div className="relative flex flex-col min-h-screen">
+      <div className="fixed inset-0 bg-gradient-to-br from-blue-500/20 via-indigo-500/10 to-blue-400/5" />
+      
+      <Container className="relative flex-grow pt-12 pb-16">
+        <div className="mx-auto max-w-[1800px]">
+          <div className="text-center mb-8">
+            <h1 className="font-display text-4xl font-medium tracking-tight text-slate-900 sm:text-5xl">
+              Upload Your Images
+            </h1>
+            <p className="mt-4 text-lg tracking-tight text-slate-700 max-w-2xl mx-auto">
+              Upload your images to get started. We accept all image formats up to 10MB per file.
             </p>
           </div>
-        </div>
 
-        {files.length > 0 && (
-          <>
-            <div className="mt-6">
-              <h2 className="text-2xl font-semibold mb-6">Uploaded Images</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 auto-rows-auto">
-                {files.map((file, index) => (
-                  <div key={index} className="relative group">
-                    <button
-                      onClick={() => handleDeleteImage(index)}
-                      className="absolute -right-2 -top-2 z-10 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
-                    >
-                      ×
-                    </button>
-                    <div className={`relative rounded-lg overflow-hidden ${
-                      !file.isValid ? 'border-4 border-red-500' : ''
-                    }`}>
-                      <Image
-                        src={file.preview || ''}
-                        alt={`Preview ${index + 1}`}
-                        width={file.dimensions?.width}
-                        height={file.dimensions?.height}
-                        className="w-full h-auto"
-                      />
-                      {!file.isValid && (
-                        <div className="absolute bottom-0 left-0 right-0 bg-red-500/80 text-white text-sm py-3 text-center">
-                          Image must be at least {MIN_RESOLUTION}px in both dimensions
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <div className="max-w-2xl mx-auto mb-12 bg-blue-50/70 rounded-2xl p-6 border border-blue-100 shadow-lg shadow-blue-100/50">
+            <h2 className="font-display text-lg font-medium text-slate-900 mb-4">
+              Guidelines
+            </h2>
+            <ul className="space-y-3 text-slate-700">
+              <li className="flex items-start">
+                <span className="text-blue-500 mr-3">•</span>
+                <span>Your images will go through a test to see if they are at least {MIN_RESOLUTION}px in both width and height, so don't worry about picking the perfect ones just yet.</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-blue-500 mr-3">•</span>
+                <span>Try to upload a variety of angles and settings of images to get the best results.</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-blue-500 mr-3">•</span>
+                <span>Upload all photos at once for the best experience.</span>
+              </li>
+            </ul>
+          </div>
+
+          <div
+            className={`
+              relative border-2 border-dashed rounded-2xl p-12
+              flex flex-col items-center justify-center
+              min-h-[300px] w-full mb-12
+              transition-all duration-200 ease-in-out
+              ${isDragging 
+                ? 'border-blue-500 bg-blue-50/50' 
+                : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
+              }
+            `}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+          >
+            <div className="mb-4">
+              <svg
+                className={`mx-auto h-12 w-12 ${isDragging ? 'text-blue-500' : 'text-slate-400'}`}
+                stroke="currentColor"
+                fill="none"
+                viewBox="0 0 48 48"
+                aria-hidden="true"
+              >
+                <path
+                  d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </div>
 
-            <form onSubmit={handleSubmit} className="mt-12 max-w-2xl mx-auto">
-              <div className="mb-6">
-                <label 
-                  htmlFor="productName" 
-                  className="block text-sm font-medium text-gray-700 mb-2"
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileInput}
+              className="hidden"
+              id="fileInput"
+            />
+
+            <div className="text-center space-y-2">
+              <div>
+                <label
+                  htmlFor="fileInput"
+                  className="relative cursor-pointer rounded-md font-medium text-lg text-blue-600 hover:text-blue-500"
                 >
-                  Enter Name of Product
+                  Upload files
                 </label>
-                <input
-                  id="productName"
-                  type="text"
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  placeholder="Enter product name..."
-                  value={productName}
-                  onChange={(e) => setProductName(e.target.value)}
-                  required
-                />
+                <span className="text-slate-700 text-lg"> or drag and drop</span>
               </div>
-              
-              <div className="mb-6">
-                <label 
-                  htmlFor="description" 
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Product Description
-                </label>
-                <textarea
-                  id="description"
-                  rows={4}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  placeholder="Enter a description of your product..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
+              <p className="text-slate-500 text-sm">
+                Any format up to 10MB
+              </p>
+            </div>
+          </div>
+
+          {files.length > 0 && (
+            <>
+              <div className="mt-16 max-w-[1800px] mx-auto">
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-blue-100 shadow-xl shadow-blue-100/20 ring-1 ring-blue-100/50">
+                  <h2 className="text-2xl font-medium text-slate-900 mb-6">
+                    Uploaded Images
+                  </h2>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    {files.map((file, index) => (
+                      <div key={index} className="relative group min-h-[200px]">
+                        <button
+                          onClick={() => handleDeleteImage(index)}
+                          className="absolute -right-2 -top-2 z-10 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        >
+                          ×
+                        </button>
+                        <div className={`
+                          relative rounded-xl overflow-hidden bg-white shadow-md hover:shadow-xl transition-all duration-200
+                          min-h-[200px] flex items-center justify-center p-4
+                          ${!file.isValid ? 'ring-2 ring-red-500' : 'hover:scale-[1.02]'}
+                        `}>
+                          <Image
+                            src={file.preview || ''}
+                            alt={`Preview ${index + 1}`}
+                            width={file.dimensions?.width}
+                            height={file.dimensions?.height}
+                            className="max-w-full max-h-[300px] w-auto h-auto object-contain"
+                          />
+                          {!file.isValid && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-red-500 text-white text-sm py-2 px-3 backdrop-blur-sm bg-opacity-90">
+                              Image must be at least {MIN_RESOLUTION}px in both dimensions
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <form onSubmit={handleSubmit} className="mt-8 max-w-2xl mx-auto">
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-blue-100 shadow-xl shadow-blue-100/20 ring-1 ring-blue-100/50 space-y-6">
+                    <div>
+                      <label 
+                        htmlFor="productName" 
+                        className="block text-base font-medium text-slate-900 mb-2"
+                      >
+                        Product Name
+                      </label>
+                      <input
+                        id="productName"
+                        type="text"
+                        className="w-full rounded-lg border-slate-200 bg-white/50 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors duration-200"
+                        placeholder="Enter product name..."
+                        value={productName}
+                        onChange={(e) => setProductName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label 
+                        htmlFor="description" 
+                        className="block text-base font-medium text-slate-900 mb-2"
+                      >
+                        Product Description
+                      </label>
+                      <textarea
+                        id="description"
+                        rows={4}
+                        className="w-full rounded-lg border-slate-200 bg-white/50 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors duration-200"
+                        placeholder="Enter a description of your product..."
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full flex items-center justify-center rounded-lg bg-blue-600 px-6 py-4 text-lg font-medium text-white shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 hover:shadow-xl transition-all duration-200"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? 'Processing...' : 'Continue'}
+                    </button>
+                  </div>
+                </form>
               </div>
-              <button
-                type="submit"
-                className="w-full flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-3 text-base font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Submitting...' : 'Submit'}
-              </button>
-            </form>
-          </>
-        )}
-      </div>
-    </Container>
+            </>
+          )}
+        </div>
+      </Container>
+    </div>
   )
 } 

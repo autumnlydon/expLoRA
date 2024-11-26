@@ -1,220 +1,168 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { Container } from '@/components/Container'
-import { openDB } from 'idb'
-import JSZip from 'jszip'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { openDB } from 'idb'
 
 interface ProcessedImage {
   id: string
   name: string
   preview: string
+  caption: string
+}
+
+const initDB = async () => {
+  return openDB('imageStore', 1, {
+    upgrade(db) {
+      if (!db.objectStoreNames.contains('images')) {
+        db.createObjectStore('images')
+      }
+    },
+  })
 }
 
 export default function Results() {
   const [images, setImages] = useState<ProcessedImage[]>([])
-  const [productName, setProductName] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
-  const [isDownloading, setIsDownloading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [captions, setCaptions] = useState<{[key: string]: string}>({})
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
     const loadImages = async () => {
       try {
-        const db = await openDB('imageStore', 1)
-        const imageCount = await db.get('images', 'imageCount') || 0
-        const loadedProductName = await db.get('images', 'productName') || ''
-        setProductName(loadedProductName)
+        const db = await initDB()
+        const imageCount = await db.get('images', 'imageCount') as number
+        const productName = await db.get('images', 'productName') as string
         
-        console.log('Found', imageCount, 'images in storage')
-        
-        const loadedImages = []
-        for (let i = 0; i < imageCount; i++) {
-          const imageData = await db.get('images', `image_${i}`)
-          if (imageData) {
-            loadedImages.push(imageData)
-          }
+        if (!imageCount) {
+          throw new Error('No images found')
         }
-        
-        setImages(loadedImages)
+
+        const loadedImages = await Promise.all(
+          Array.from(Array(imageCount).keys()).map(async (i) => {
+            const imageData = await db.get('images', `image_${i}`)
+            return imageData as ProcessedImage
+          })
+        )
+
+        const generatedCaptions = await Promise.all(
+          loadedImages.map(async (image) => {
+            const response = await fetch('/api/openai', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                prompt: `Create a prompt for the following images, describing everything except the ${productName}. Describe the scene, background, lighting, style, and any props & objects. Instead of describing the ${productName}, refer to it as ${productName}. Start each prompt with the prefix sentence “A photo of ${productName} in different colors at different angles”. Adjust the prefix based on the colors or angles or number of ${productName}, for ex “A Photo of a Red ${productName}”.`,
+                image: image.preview,
+                productName
+              }),
+            })
+
+            if (!response.ok) {
+              throw new Error('Failed to generate caption')
+            }
+
+            const data = await response.json()
+            return data.result
+          })
+        )
+
+        await db.put('images', generatedCaptions, 'generatedCaptions')
+        console.log('Stored AI captions:', generatedCaptions)
+
+        setImages(loadedImages.filter(Boolean))
+        setLoading(false)
       } catch (error) {
         console.error('Failed to load images:', error)
-        setError('Failed to load images. Please try again.')
-      } finally {
-        setIsLoading(false)
+        setError('Failed to load images. Please try uploading again.')
+        setLoading(false)
       }
     }
 
     loadImages()
   }, [])
 
-  const handleDownload = async () => {
-    try {
-      setIsDownloading(true)
-      const zip = new JSZip()
-      
-      for (const image of images) {
-        const response = await fetch(image.preview)
-        const blob = await response.blob()
-        zip.file(image.name, blob)
-      }
-      
-      const content = await zip.generateAsync({ type: 'blob' })
-      const url = window.URL.createObjectURL(content)
-      const a = document.createElement('a')
-      a.href = url
-      const safeProductName = productName.replace(/[^a-z0-9]/gi, '_').toLowerCase()
-      a.download = `${safeProductName}_images.zip`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      window.URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error('Download failed:', error)
-      setError('Failed to download images. Please try again.')
-    } finally {
-      setIsDownloading(false)
-    }
-  }
-
-  const analyzeImages = async () => {
-    setIsAnalyzing(true)
-    const newCaptions: {[key: string]: string} = {}
-    
-    try {
-      for (const image of images) {
-        console.log(`Analyzing image ${image.name}...`)
-        
-        if (!image.preview) {
-          console.error(`No preview available for ${image.name}`)
-          continue
-        }
-
-        try {
-          const response = await fetch('/api/openai', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              prompt: `Create a prompt for the following images, describing everything except the ${productName}. Describe the scene, background, lighting, style, and any props & objects. Instead of describing the ${productName}s, refer to it as PN. Start each prompt with the prefix sentence “A photo of PN in different angles, positions, and settings.”. Adjust the prefix based on the positions or angle or settings of ${productName}s, for ex “A Photo of a PN from a top down angle“.`,
-              image: image.preview.split(',')[1] // Remove data:image/png;base64, prefix if present
-            })
-          })
-
-          if (!response.ok) {
-            const errorData = await response.json()
-            throw new Error(`API error: ${errorData.error || response.statusText}`)
-          }
-          
-          const data = await response.json()
-          console.log(`Received caption for ${image.name}:`, data.result)
-          newCaptions[image.id] = data.result
-        } catch (error) {
-          console.error(`Failed to analyze ${image.name}:`, error)
-          newCaptions[image.id] = `Failed to analyze: ${error instanceof Error ? error.message : 'Unknown error'}`
-        }
-      }
-      
-      // Store captions even if some failed
-      const db = await openDB('imageStore', 1)
-      await db.put('images', newCaptions, 'captions')
-      
-      setCaptions(newCaptions)
-      console.log('All captions stored successfully')
-      
-      router.push('/labelling')
-    } catch (error) {
-      console.error('Failed to analyze images:', error)
-      alert('Failed to analyze images. Please try again.')
-    } finally {
-      setIsAnalyzing(false)
-    }
-  }
-
-  if (error) {
-    return (
-      <Container className="pt-12 pb-16">
-        <div className="text-red-500">{error}</div>
-      </Container>
-    )
-  }
-
   return (
-    <Container className="pt-12 pb-16">
-      <div className="mx-auto max-w-[1800px]">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">Results</h1>
-            {productName && (
-              <h2 className="text-xl text-gray-600 mt-2">{productName}</h2>
-            )}
+    <div className="relative flex flex-col min-h-screen">
+      <div className="fixed inset-0 bg-gradient-to-br from-blue-500/20 via-indigo-500/10 to-blue-400/5" />
+      
+      <Container className="relative flex-grow pt-12 pb-16">
+        <div className="mx-auto w-full">
+          <div className="text-center mb-8">
+            <h1 className="font-display text-4xl font-medium tracking-tight text-slate-900 sm:text-5xl">
+              Image Processing Results
+            </h1>
+            <p className="mt-4 text-lg tracking-tight text-slate-700 max-w-2xl mx-auto">
+              Your images have been processed successfully. Click continue to add captions to your images.
+            </p>
           </div>
-          <div className="space-x-4">
-            <button
-              onClick={analyzeImages}
-              disabled={isAnalyzing}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-400"
-            >
-              {isAnalyzing ? 'Analyzing...' : 'Generate Captions'}
-            </button>
-            <Link
-              href="/labelling"
-              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
-            >
-              Edit Captions
-            </Link>
-            {images.length > 0 && (
-              <button
-                onClick={handleDownload}
-                disabled={isDownloading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors"
-              >
-                {isDownloading ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Creating ZIP...
-                  </span>
-                ) : (
-                  'Download All Images'
-                )}
-              </button>
-            )}
-          </div>
-        </div>
 
-        {error && (
-          <div className="text-red-500 mb-4">{error}</div>
-        )}
-
-        {isLoading ? (
-          <div>Loading images...</div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {images.map((image) => (
-              <div key={image.id} className="flex flex-col items-center">
-                <img
-                  src={image.preview}
-                  alt={image.name}
-                  className="max-w-full h-auto rounded-lg shadow-md"
-                  style={{ maxHeight: '300px', objectFit: 'contain' }}
-                />
-                <p className="mt-2 text-sm text-gray-600">
-                  {image.name}
-                </p>
+          {error ? (
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-red-100 shadow-xl shadow-red-100/20 ring-1 ring-red-100/50">
+              <p className="text-red-500 text-center">{error}</p>
+            </div>
+          ) : loading ? (
+            <div className="flex justify-center items-center min-h-[200px]">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
+            </div>
+          ) : (
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-blue-100 shadow-xl shadow-blue-100/20 ring-1 ring-blue-100/50">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                {images.map((image, index) => (
+                  <div key={image.id || index} className="relative group">
+                    <div className="relative rounded-xl overflow-hidden bg-white shadow-md hover:shadow-xl transition-all duration-200 flex flex-col">
+                      <div className="relative aspect-square w-full">
+                        <Image
+                          src={image.preview}
+                          alt={`Image ${index + 1}`}
+                          fill
+                          className="object-contain p-4"
+                        />
+                      </div>
+                      <div className="p-4 bg-white/50 backdrop-blur-sm border-t border-blue-100/20">
+                        <p className="text-sm md:text-base xl:text-lg font-medium text-slate-700">
+                          {`IMG_${String(index + 1).padStart(2, '0')}.png`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </Container>
+
+              <div className="mt-12 flex justify-center">
+  <button
+    onClick={() => router.push('/labelling')}
+    className="group relative flex items-center justify-center gap-2 rounded-xl 
+    bg-blue-100/30 backdrop-blur-2xl
+    px-8 py-4 text-lg font-semibold text-blue-900
+    shadow-lg shadow-blue-100/30
+    border-2 border-white/50
+    hover:bg-blue-100/40 hover:border-white/60 hover:scale-[1.02]
+    transform transition-all duration-200"
+  >
+    Continue to Labelling
+    <svg 
+      className="w-5 h-5 transition-transform duration-200 group-hover:translate-x-1" 
+      fill="none" 
+      viewBox="0 0 24 24" 
+      stroke="currentColor"
+    >
+      <path 
+        strokeLinecap="round" 
+        strokeLinejoin="round" 
+        strokeWidth={2} 
+        d="M13 7l5 5m0 0l-5 5m5-5H6"
+      />
+    </svg>
+  </button>
+</div>
+            </div>
+          )}
+        </div>
+      </Container>
+    </div>
   )
 } 
