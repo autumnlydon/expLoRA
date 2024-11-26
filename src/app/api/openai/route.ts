@@ -8,7 +8,7 @@ const openai = new OpenAI({
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { prompt, image, productName } = body
+    const { prompt, image, productName, triggerWord } = body
 
     const imageUrl = image.startsWith('data:') 
       ? image 
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
           content: [
             { 
               type: "text", 
-              text: `Please provide a detailed, clear description of this ${productDescription} image. Describe the ${productDescription}'s appearance, focusing on its key features, colors, textures, and any notable visual elements. Keep the description concise but informative. Refer to the item only as "${productDescription}".`
+              text: `Please provide a detailed, clear description of this ${productDescription} image, yet only referring to the item as the trigger word "${triggerWord}". Describe the ${productName}'s appearance, focusing on its key features, colors, textures, and any notable visual elements. Keep the description concise but informative. Refer to the item only as "${triggerWord}".`
             },
             {
               type: "image_url",

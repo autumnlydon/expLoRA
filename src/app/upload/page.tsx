@@ -21,6 +21,7 @@ interface ImageFile extends File {
 interface FormData {
   description: string
   images: ImageFile[]
+  triggerWord: string
 }
 
 // Add this helper function at the top level
@@ -104,6 +105,7 @@ export default function Upload() {
   const [description, setDescription] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [productName, setProductName] = useState('')
+  const [triggerWord, setTriggerWord] = useState('')
 
   useEffect(() => {
     // Clear old images when component mounts fresh (not from back navigation)
@@ -200,9 +202,9 @@ export default function Upload() {
     try {
       const db = await initDB()
       
-      // Store the product name
+      // Store the product name and trigger word
       await db.put('images', productName, 'productName')
-      console.log('Stored product name:', productName) // Debug log
+      await db.put('images', triggerWord, 'triggerWord')
       
       // Store the files
       await Promise.all(files.map(async (file, index) => {
@@ -390,6 +392,24 @@ export default function Upload() {
                         placeholder="Enter a description of your product..."
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <label 
+                        htmlFor="triggerWord" 
+                        className="block text-base font-medium text-slate-900 mb-2"
+                      >
+                        Trigger Word
+                      </label>
+                      <input
+                        id="triggerWord"
+                        type="text"
+                        className="w-full rounded-lg border-slate-200 bg-white/50 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors duration-200"
+                        placeholder="Enter trigger word..."
+                        value={triggerWord}
+                        onChange={(e) => setTriggerWord(e.target.value)}
+                        required
                       />
                     </div>
 
