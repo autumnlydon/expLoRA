@@ -24,7 +24,7 @@ export async function POST(req: Request) {
           content: [
             { 
               type: "text", 
-              text: `Please provide a detailed, clear description of this ${productDescription} image, yet only referring to the item as the trigger word "${triggerWord}". Describe the ${productName}'s appearance, focusing on its key features, colors, textures, and any notable visual elements. Keep the description concise but informative. Refer to the item only as "${triggerWord}".`
+              text: `Please provide a detailed, clear description of this image of ${productName}, yet only referring to the item as the trigger word "${triggerWord}". Describe the ${productName}'s appearance, focusing on its key features, colors, textures, and any notable visual elements. Keep the description concise but informative. Refer to the item only as "${triggerWord}". Intricately describe the setting and context of the image.`
             },
             {
               type: "image_url",

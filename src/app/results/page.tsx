@@ -57,7 +57,6 @@ export default function Results() {
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
-                prompt: `Create a prompt for the following images, describing everything except the ${productName}. Describe the scene, background, lighting, style, and any props & objects. Instead of referring to the item as ${productName}, refer to it as ${triggerWord}. Start each prompt with the prefix sentence "A photo of ${triggerWord} in different colors at different angles". Adjust the prefix based on the colors or angles or number of ${triggerWord}.`,
                 image: image.preview,
                 productName,
                 triggerWord
