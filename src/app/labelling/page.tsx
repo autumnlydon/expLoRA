@@ -82,7 +82,7 @@ export default function Labelling() {
   const handleSubmit = async () => {
     try {
       setLoading(true)
-      router.push('/download')
+      router.push('/submission')
     } catch (error) {
       console.error('Failed to process labels:', error)
       setError('Failed to process labels. Please try again.')
