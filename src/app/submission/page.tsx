@@ -5,6 +5,7 @@ import { Container } from '@/components/Container'
 import { openDB } from 'idb'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
+import { clearIndexedDBStore } from '@/utils/indexedDB'
 
 export default function SubmissionPage() {
   const [error, setError] = useState<string | null>(null)
@@ -58,6 +59,9 @@ export default function SubmissionPage() {
       const safeProductName = productName.replace(/[^a-z0-9]/gi, '_').toLowerCase()
       const content = await zip.generateAsync({ type: 'blob' })
       saveAs(content, `${safeProductName}_dataset.zip`)
+      
+      // Clear IndexedDB after successful download
+      await clearIndexedDBStore()
       
     } catch (error) {
       console.error('Download error:', error)
