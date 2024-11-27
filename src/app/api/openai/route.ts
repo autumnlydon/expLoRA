@@ -24,7 +24,7 @@ export async function POST(req: Request) {
           content: [
             { 
               type: "text", 
-              text: `Please provide a detailed, clear description of this image of ${productName}, yet only referring to the item as the trigger word "${triggerWord}". Describe the ${productName}'s appearance, focusing on its key features, colors, textures, and any notable visual elements. Keep the description concise but informative. Refer to the item only as "${triggerWord}". Intricately describe the setting and context of the image.`
+              text: `You a world-class Data labeler with pride on your attention to detail. You are captioning the following images of an object to train a diffusion LoRa. The object is ${productName}. Meticulously describe the scene of the image & how the ${productName} interacts with the scene, but do not describe the ${productName} itself. Rather than refering to the object by its name, please refer to it using the following trigger world: ${triggerWord}. Please try and use the trigger word at least twice in your caption.`
             },
             {
               type: "image_url",
