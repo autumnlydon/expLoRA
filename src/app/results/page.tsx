@@ -112,6 +112,7 @@ export default function Results() {
         await db.put('images', generatedCaptions, 'generatedCaptions')
         console.log('Stored AI captions:', generatedCaptions)
         
+        setImages(loadedImages)
         setLoading(false)
       } catch (error) {
         console.error('Failed to load images:', error)
@@ -119,7 +120,6 @@ export default function Results() {
         setLoading(false)
       }
     }
-
     loadImages()
   }, [])
 
@@ -172,25 +172,25 @@ export default function Results() {
                   ))}
               </div>
 
-              <div className="mt-8 flex justify-center gap-4">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="px-4 py-2 rounded-lg bg-blue-100 text-blue-900 disabled:opacity-50"
-                >
-                  Previous
-                </button>
-                <span className="px-4 py-2">
-                  Page {currentPage} of {Math.ceil(images.length / imagesPerPage)}
-                </span>
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(images.length / imagesPerPage)))}
-                  disabled={currentPage >= Math.ceil(images.length / imagesPerPage)}
-                  className="px-4 py-2 rounded-lg bg-blue-100 text-blue-900 disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </div>
+              <div className="mt-8 flex items-center justify-center gap-4">
+  <button
+    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+    disabled={currentPage === 1}
+    className="px-4 py-2 rounded-lg bg-blue-100 text-blue-900 disabled:opacity-50"
+  >
+    Previous
+  </button>
+  <span className="px-4 py-2">
+    Page {currentPage} of {Math.ceil(images.length / imagesPerPage)}
+  </span>
+  <button
+    onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(images.length / imagesPerPage)))}
+    disabled={currentPage >= Math.ceil(images.length / imagesPerPage)}
+    className="px-4 py-2 rounded-lg bg-blue-100 text-blue-900 disabled:opacity-50"
+  >
+    Next
+  </button>
+</div>
 
               <div className="mt-12 flex justify-center">
                 <button
