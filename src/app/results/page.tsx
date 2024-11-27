@@ -86,8 +86,6 @@ export default function Results() {
           })
         )
 
-        const triggerWord = await db.get('images', 'triggerWord') as string
-
         const generatedCaptions = await Promise.all(
           loadedImages.map(async (image) => {
             const response = await fetch('/api/openai', {

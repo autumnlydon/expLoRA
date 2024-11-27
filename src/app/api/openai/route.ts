@@ -24,7 +24,7 @@ export async function POST(req: Request) {
           content: [
             { 
               type: "text", 
-              text: `You a world-class Data labeler with pride on your attention to detail. You are captioning the following images of an object to train a diffusion LoRa. The object is ${productName}. Meticulously describe the scene of the image & how the ${productName} interacts with the scene, but do not describe the ${productName} itself. Rather than refering to the object by its name, please refer to it using the following trigger world: ${triggerWord}. Please try and use the trigger word at least twice in your caption.`
+              text: `You are a world-class Data labeler with pride on your attention to detail. You are captioning the following images of an object to train a diffusion LoRa. The object is ${productName}. Meticulously describe the scene of the image & how the ${productName} interacts with the scene, but do not describe the ${productName} itself. Rather than refering to the object by its name, please refer to it using the following trigger world: ${triggerWord}. Please try and use the trigger word at least twice in your caption.`
             },
             {
               type: "image_url",
