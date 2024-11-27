@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Container } from '@/components/Container'
 import { useRouter } from 'next/navigation'
 import { openDB } from 'idb'
+import { fetchWithRetry } from '@/utils/api'
 
 interface ProcessedImage {
   id: string
@@ -23,48 +24,39 @@ const initDB = async () => {
   })
 }
 
-const processBatch = async (images: ProcessedImage[], productName: string, triggerWord: string, batchSize = 3) => {
-  const captions = []
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const generateCaptionsSequentially = async (
+  loadedImages: ProcessedImage[],
+  productName: string,
+  triggerWord: string
+) => {
+  const captions = [];
   
-  for (let i = 0; i < images.length; i += batchSize) {
-    const batch = images.slice(i, i + batchSize)
-    
-    // Process each image in the batch sequentially instead of in parallel
-    for (const image of batch) {
-      try {
-        const response = await fetch('/api/openai', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            image: image.preview,
-            productName,
-            triggerWord
-          }),
-        })
-
-        if (!response.ok) {
-          throw new Error('Failed to generate caption')
-        }
-
-        const data = await response.json()
-        captions.push(data.result)
-        
-        // Add a longer delay between individual requests
-        await new Promise(resolve => setTimeout(resolve, 2000))
-      } catch (error) {
-        console.error(`Failed to process image:`, error)
-        captions.push(null)
-      }
+  for (const image of loadedImages) {
+    try {
+      const data = await fetchWithRetry('/api/openai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image: image.preview,
+          productName,
+          triggerWord
+        }),
+      });
+      
+      captions.push(data.result);
+      await delay(1000); // Add 1 second delay between successful requests
+    } catch (error) {
+      console.error('Failed to generate caption:', error);
+      captions.push('Failed to generate caption');
     }
-    
-    // Add an even longer delay between batches
-    await new Promise(resolve => setTimeout(resolve, 5000))
   }
   
-  return captions
-}
+  return captions;
+};
 
 export default function Results() {
   const [images, setImages] = useState<ProcessedImage[]>([])
@@ -94,11 +86,32 @@ export default function Results() {
           })
         )
 
-        setImages(loadedImages.filter(Boolean))
-        
-        const generatedCaptions = await processBatch(loadedImages, productName, triggerWord)
-        
-        await db.put('images', generatedCaptions.filter(Boolean), 'generatedCaptions')
+        const triggerWord = await db.get('images', 'triggerWord') as string
+
+        const generatedCaptions = await Promise.all(
+          loadedImages.map(async (image) => {
+            const response = await fetch('/api/openai', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                image: image.preview,
+                productName,
+                triggerWord
+              }),
+            })
+
+            if (!response.ok) {
+              throw new Error('Failed to generate caption')
+            }
+
+            const data = await response.json()
+            return data.result
+          })
+        )
+
+        await db.put('images', generatedCaptions, 'generatedCaptions')
         console.log('Stored AI captions:', generatedCaptions)
         
         setLoading(false)
