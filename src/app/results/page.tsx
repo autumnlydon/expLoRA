@@ -86,8 +86,11 @@ export default function Results() {
           })
         )
 
-        const generatedCaptions = await Promise.all(
-          loadedImages.map(async (image) => {
+        const generatedCaptions = []
+        for (const image of loadedImages) {
+          try {
+            await new Promise(resolve => setTimeout(resolve, 1000))
+            
             const response = await fetch('/api/openai', {
               method: 'POST',
               headers: {
@@ -105,9 +108,12 @@ export default function Results() {
             }
 
             const data = await response.json()
-            return data.result
-          })
-        )
+            generatedCaptions.push(data.result)
+          } catch (error) {
+            console.error('Failed to generate caption:', error)
+            generatedCaptions.push('Failed to generate caption')
+          }
+        }
 
         await db.put('images', generatedCaptions, 'generatedCaptions')
         console.log('Stored AI captions:', generatedCaptions)
