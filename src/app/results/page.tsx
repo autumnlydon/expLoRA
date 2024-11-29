@@ -59,64 +59,27 @@ const generateCaptionsSequentially = async (
 };
 
 export default function Results() {
+  const [currentPage, setCurrentPage] = useState(1)
+  const imagesPerPage = 9
   const [images, setImages] = useState<ProcessedImage[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalImages, setTotalImages] = useState(0)
-  const imagesPerPage = 9
+  const [generatingCaptions, setGeneratingCaptions] = useState(false)
   const router = useRouter()
 
+  // Initial load of images without captions
   useEffect(() => {
     const loadImages = async () => {
       try {
         const db = await initDB()
         const imageCount = await db.get('images', 'imageCount') as number
-        const productName = await db.get('images', 'productName') as string
-        const triggerWord = await db.get('images', 'triggerWord') as string
         
-        if (!imageCount) {
-          throw new Error('No images found')
-        }
-
         const loadedImages = await Promise.all(
           Array.from(Array(imageCount).keys()).map(async (i) => {
             const imageData = await db.get('images', `image_${i}`)
-            return imageData as ProcessedImage
+            return imageData
           })
         )
-
-        const generatedCaptions = []
-        for (const image of loadedImages) {
-          try {
-            await new Promise(resolve => setTimeout(resolve, 1000))
-            
-            const response = await fetch('/api/openai', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                image: image.preview,
-                productName,
-                triggerWord
-              }),
-            })
-
-            if (!response.ok) {
-              throw new Error('Failed to generate caption')
-            }
-
-            const data = await response.json()
-            generatedCaptions.push(data.result)
-          } catch (error) {
-            console.error('Failed to generate caption:', error)
-            generatedCaptions.push('Failed to generate caption')
-          }
-        }
-
-        await db.put('images', generatedCaptions, 'generatedCaptions')
-        console.log('Stored AI captions:', generatedCaptions)
         
         setImages(loadedImages)
         setLoading(false)
@@ -126,8 +89,40 @@ export default function Results() {
         setLoading(false)
       }
     }
+
     loadImages()
   }, [])
+
+  // Handle continue button click
+  const handleContinue = async () => {
+    try {
+      setGeneratingCaptions(true)
+      const db = await initDB()
+      
+      // Get product name and trigger word from IndexedDB
+      const productName = await db.get('images', 'productName')
+      const triggerWord = await db.get('images', 'triggerWord')
+
+      // Generate captions
+      const generatedCaptions = await generateCaptionsSequentially(
+        images,
+        productName,
+        triggerWord
+      )
+
+      // Store captions in IndexedDB
+      await db.put('images', generatedCaptions, 'generatedCaptions')
+      console.log('Stored AI captions:', generatedCaptions)
+
+      // Navigate to labelling page
+      router.push('/labelling')
+    } catch (error) {
+      console.error('Failed to generate captions:', error)
+      setError('Failed to generate captions. Please try again.')
+    } finally {
+      setGeneratingCaptions(false)
+    }
+  }
 
   return (
     <div className="relative flex flex-col min-h-screen">
@@ -198,33 +193,31 @@ export default function Results() {
   </button>
 </div>
 
-              <div className="mt-12 flex justify-center">
+              <div className="mt-8 flex justify-center">
                 <button
-                  onClick={() => router.push('/labelling')}
-                  className="group relative flex items-center justify-center gap-2 rounded-xl 
-                  bg-blue-100/30 backdrop-blur-2xl
-                  px-8 py-4 text-lg font-semibold text-blue-900
-                  shadow-lg shadow-blue-100/30
-                  border-2 border-white/50
-                  hover:bg-blue-100/40 hover:border-white/60 hover:scale-[1.02]
-                  transform transition-all duration-200"
+                  onClick={handleContinue}
+                  disabled={loading || generatingCaptions}
+                  className="w-full max-w-md flex items-center justify-center rounded-lg bg-blue-600 px-6 py-4 text-lg font-medium text-white shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Continue to Labelling
-                  <svg 
-                    className="w-5 h-5 transition-transform duration-200 group-hover:translate-x-1" 
-                    fill="none" 
-                    viewBox="0 0 24 24" 
-                    stroke="currentColor"
-                  >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M13 7l5 5m0 0l-5 5m5-5H6"
-                    />
-                  </svg>
+                  {generatingCaptions ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Generating Captions...
+                    </>
+                  ) : (
+                    'Continue to Labelling'
+                  )}
                 </button>
               </div>
+
+              {error && (
+                <div className="mt-4 text-center text-red-600">
+                  {error}
+                </div>
+              )}
             </div>
           )}
         </div>
