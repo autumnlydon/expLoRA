@@ -37,6 +37,7 @@ const initDB = async () => {
 }
 
 // Modify the convertToPNG function to ensure we keep the base64 data
+
 const convertToPNG = (file: File, index: number): Promise<ImageFile> => {
   return new Promise((resolve) => {
     const img = new window.Image()
@@ -95,6 +96,25 @@ const checkImageDimensions = async (file: File, index: number): Promise<ImageFil
       }
     }
     reader.readAsDataURL(pngFile)
+  })
+}
+
+const validateImage = (file: File, index: number): Promise<ImageFile> => {
+  return new Promise((resolve) => {
+    const img = new window.Image()
+    img.onload = () => {
+      const imageFile: ImageFile = file as ImageFile
+      imageFile.preview = URL.createObjectURL(file)
+      imageFile.dimensions = {
+        width: img.width,
+        height: img.height
+      }
+      imageFile.id = crypto.randomUUID()
+      imageFile.isValid = img.width >= MIN_RESOLUTION && img.height >= MIN_RESOLUTION
+      
+      resolve(imageFile)
+    }
+    img.src = URL.createObjectURL(file)
   })
 }
 
@@ -165,16 +185,14 @@ export default function Upload() {
     const droppedFiles = Array.from(e.dataTransfer.files)
     const imageFiles = droppedFiles.filter(file => file.type.startsWith('image/'))
     
-    // Pass index to convertToPNG
-    Promise.all(imageFiles.map((file, index) => convertToPNG(file, index)))
+    Promise.all(imageFiles.map((file, index) => validateImage(file, index)))
       .then(processedFiles => setFiles(prev => [...prev, ...processedFiles]))
   }, [])
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files)
-      // Pass index to convertToPNG
-      Promise.all(newFiles.map((file, index) => convertToPNG(file, index)))
+      Promise.all(newFiles.map((file, index) => validateImage(file, index)))
         .then(processedFiles => setFiles(prev => [...prev, ...processedFiles]))
     }
   }
@@ -200,14 +218,19 @@ export default function Upload() {
     setIsSubmitting(true)
     
     try {
+      // Convert all files to PNG before submission
+      const convertedFiles = await Promise.all(
+        files.map((file, index) => convertToPNG(file, index))
+      )
+      
       const db = await initDB()
       
       // Store the product name and trigger word
       await db.put('images', productName, 'productName')
       await db.put('images', triggerWord, 'triggerWord')
       
-      // Store the files
-      await Promise.all(files.map(async (file, index) => {
+      // Store the converted files
+      await Promise.all(convertedFiles.map(async (file, index) => {
         await db.put('images', {
           id: file.id,
           name: file.name,
@@ -215,7 +238,7 @@ export default function Upload() {
         }, `image_${index}`)
       }))
       
-      await db.put('images', files.length, 'imageCount')
+      await db.put('images', convertedFiles.length, 'imageCount')
       
       router.push('/results')
     } catch (error) {
@@ -418,7 +441,7 @@ export default function Upload() {
                       className="w-full flex items-center justify-center rounded-lg bg-blue-600 px-6 py-4 text-lg font-medium text-white shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 hover:shadow-xl transition-all duration-200"
                       disabled={isSubmitting}
                     >
-                      {isSubmitting ? 'Processing...' : 'Continue'}
+                      {isSubmitting ? 'Converting and Processing...' : 'Continue'}
                     </button>
                   </div>
                 </form>
