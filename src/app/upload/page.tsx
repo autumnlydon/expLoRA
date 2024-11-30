@@ -251,7 +251,11 @@ export default function Upload() {
 
   return (
     <div className="relative flex flex-col min-h-screen">
+      {/* Base gradient that scales with viewport */}
       <div className="fixed inset-0 bg-gradient-to-br from-blue-500/20 via-indigo-500/10 to-blue-400/5" />
+      
+      {/* Additional gradient for larger screens */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-indigo-500/10 to-blue-400/5 scale-150" />
       
       <Container className="relative flex-grow pt-12 pb-16">
         <div className="mx-auto max-w-[1800px]">
