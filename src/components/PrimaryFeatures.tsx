@@ -79,7 +79,7 @@ export function PrimaryFeatures() {
             Everything you need to create a clean, LoRA-ready dataset.
           </h2>
           <p className="mt-6 text-lg tracking-tight text-blue-100">
-            Well everything you need if you use less than 20 images rn bc it's a little buggy.
+            Well everything you need if you use less than 20 images rn bc it&apos;s a little buggy.
           </p>
         </div>
         <TabGroup

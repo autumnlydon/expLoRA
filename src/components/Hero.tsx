@@ -12,7 +12,7 @@ export function Hero() {
           </span>
         </h1>
         <p className="mx-auto mt-8 max-w-2xl text-lg tracking-tight text-slate-700">
-          Upload 10-25 images of your product. We'll return a zip file that is ready to use for training your own AI model using LoRa.
+          Upload 10-25 images of your product. We&apos;ll return a zip file that is ready to use for training your own AI model using LoRa.
         </p>
         <div className="mt-12 flex flex-col items-center gap-8">
           <Button 

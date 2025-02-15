@@ -275,7 +275,7 @@ export default function Upload() {
             <ul className="space-y-3 text-slate-700">
               <li className="flex items-start">
                 <span className="text-blue-500 mr-3">•</span>
-                <span>Your images will go through a test to see if they are at least {MIN_RESOLUTION}px in both width and height, so don't worry about picking the perfect ones just yet.</span>
+                <span>Your images will go through a test to see if they are at least {MIN_RESOLUTION}px in both width and height, so don&apos;t worry about picking the perfect ones just yet.</span>
               </li>
               <li className="flex items-start">
                 <span className="text-blue-500 mr-3">•</span>
