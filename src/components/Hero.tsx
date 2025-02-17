@@ -22,7 +22,6 @@ export function Hero() {
             Start Uploading For Free
           </Button>
           
-          {/* Commenting out scroll to learn more section
           <div className="flex flex-col items-center text-slate-600">
             <p className="text-lg mb-3">
               Scroll to learn more
@@ -39,7 +38,6 @@ export function Hero() {
               <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
             </svg>
           </div>
-          */}
         </div>
       </Container>
     </section>

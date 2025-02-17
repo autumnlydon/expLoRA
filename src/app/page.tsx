@@ -17,6 +17,7 @@ export default function Home() {
         <Header />
         <main>
           <Hero />
+          {/* comment out page components to disable them */}
           {/* <PrimaryFeatures />
           <SecondaryFeatures />
           <CallToAction /> */}
