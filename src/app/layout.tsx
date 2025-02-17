@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     default: 'expLoRA - Create a clean, polished dataset. Ready for LoRA training.  ',
   },
   description:
-    'Most bookkeeping software is accurate, but hard to use. We make the opposite trade-off, and hope you don’t get audited.',
+    'LoRA training is hard. We make it easy.',
 }
 
 const inter = Inter({
