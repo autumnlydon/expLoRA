@@ -8,7 +8,7 @@ import { IndexedDBCleanup } from '@/components/IndexedDBCleanup'
 export const metadata: Metadata = {
   title: {
     template: '%s - ExpLoRA',
-    default: 'expLoRA - Create a clean, polished dataset. Ready for LoRA training.  ',
+    default: 'expLoRA - Create a clean, polished dataset. Ready for high quality LoRA training.  ',
   },
   description:
     'LoRA training is hard. We make it easy.',
